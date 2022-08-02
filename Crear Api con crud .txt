@@ -1,0 +1,201 @@
+CREAR APIS CON CRUD
+
+*crear proyecto en laravel 
+*entrar al proyecto 
+*como para este crud solo usara titulo y descripcion , crearemos un modelo post con su migracion  en el terminal :
+          
+		  php artisan make:model Post -m    // el -m es para crear una migracion junto con el modelo 
+
+*luego entraremos a database/migrations / create_Post_table 
+
+         {...}
+		        public function up()
+    {
+        Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->longText('description');
+			//puedes agregar mas elementos a la tabla como:
+			//$table->unsignedBigInteger('user_id');
+            $table->timestamps();
+			//puedes relacionarlos con una llave foranea para conectar como por ejemplo:
+			//$table->foreign('user_id')->references('id')->on('users'); //conecta conecta la tabla user id con la tablausers con la referencia id
+        });
+    }
+
+* Volvemos al terminal :
+
+         php artisan migrate   o php artisan migrate:refresh// en caso de que opreviamente ya migraste 
+
+*luego de revisar que las tablas fueron creadas en la db , nos dirigimos a App/Models/Post
+*para crear  una propiedad rellenable para usarlo de forma masiva :
+       
+         {...}	 
+         
+         class Post extends Model
+		{
+			use HasFactory;
+	
+			protected $fillable = ['title', 'description'];
+		}
+		 
+
+*Luego de ello necesitaaremos un controlador , para ello debemos ir a la terminal:
+		
+		php artisan make:controller  Api\PostController --model=Post      //se coloca Api\\ para crear una carpeta donde estara el archivo PostController y --model=Post para pasar la publicacion modelo que es Post
+
+*luego de marle enter se habran creado el archivo PostController con los elementos para hacer crud 
+*Nos dirigimos a Routes/Api :
+
+        Route::apiResource('posts',PostController::class);
+
+ *para ver las rutas disponibles , escribimos en el terminal :
+  
+  
+         php artisan route:list
+
+*abrimos postman o insomnia y la seccion get colocamos  la url del proyecto:
+
+                   GET http://laravelapi.test
+
+*volvemos al postcontroller y colocamos 
+    
+	
+	      public function index()
+    {
+        //
+        return response()->json([
+            'status' => true,
+            'posts '=>[]
+        ]);
+    }
+
+*luego volvemos al postman y colocamos :
+       
+	          http://laravelapi.test/api/posts
+			  
+*saldra datos :     'status' => true,
+					'posts '=>[]
+
+*Lo siguiente es crear un post y para ello creamos una nueva ventana en el postman 
+ 
+			  Post http://laravelapi.test/api/posts
+
+*vamos a la seccion de body , seleccionamos json , raw y escribimos :
+			
+			{
+				"title": " esta es la primera descripcion",
+				"description": "esta es la primera descripcion del post"
+			}
+			
+*Para validar que la funcion post almacene los datos , crearemos un request en la terminal
+
+			php artisan make:request StorePostRequest
+
+*Luego , emtramos  al archivo App/Request/StorePostRequest
+
+* Se cambila la funcion  authorize a true :
+
+          {...}	 
+						  public function authorize()
+							{
+								return true;
+							}
+							
+*En el mismo archivo m en la funcion rules  escribimos los elementos que queremos que devuelva , en este caso el title y description:
+
+               {...}	
+							  public function rules()
+							{
+								return [
+								"title" =>'required|max:70',
+								'description' =>'required',
+										];
+							}
+							
+*volvemos a Post controller y en la parte de store se modifica lo siguiente:
+
+                           use App\Http\Requests\StorePostRequest;
+
+
+              {...}
+							public function store(StorePostRequest $request)
+							{
+								//Parte donde se validara  los datos via postman 
+								//antes de  continuar , se crea una request para validar los datos , en este caso se llamara StorePostRequest
+
+								dd($request->all());// para validar si llega el dato , se puede borrar o colocar en comentario 
+							}
+
+* Regresamos al postman y en headers colocamos :
+
+  Key: Accept    Value: application/json
+  
+* Al ver que si llega los datos , volvemos al PostController y en la funcion store , se escribe: 
+
+							 public function store(StorePostRequest $request)
+							{
+								//Parte donde se validara  los datos via postman 
+								//antes de  continuar , se crea una request para validar los datos , en este caso se llamara StorePostRequest
+
+								// dd($request->all());
+								$post=Post::create($request->all());
+								return response()->json([
+									'status' => true,
+									//si gustas puedes colocar un mensaje , poder este :
+										'message' => 'POST CREADO!!!!',
+											'posts '=>$post
+											],200);
+							}
+*continuando con postcontroller
+       
+	     return response()->json([
+            'status' => true,
+            //si gustas puedes colocar un mensaje , poder este :
+            'message' => 'POST ACTUALIZADO!!!!',
+            'posts '=>$post
+        ],200);
+		
+		 public function store(StorePostRequest $request)
+    {
+        //Parte donde se validara  los datos via postman 
+        //antes de  continuar , se crea una request para validar los datos , en este caso se llamara StorePostRequest
+
+       // dd($request->all());
+       $post=Post::create($request->all());
+       return response()->json([
+        'status' => true,
+        //si gustas puedes colocar un mensaje , poder este :
+        'message' => 'POST CREADO!!!!',
+        'posts '=>$post
+    ],200);
+    }
+	
+	 public function update(StorePostRequest $request, Post $post)
+    {
+        //reciclamos el codigo de response json que hicimos en store
+
+        $post->update($request->all());
+        return response()->json([
+            'status' => true,
+            //si gustas puedes colocar un mensaje , poder este :
+            'message' => 'POST ACTUALIZADO!!!!',
+            'posts '=>$post
+        ],200);
+    }
+	
+	 public function destroy(Post $post)
+    {
+        //para eliminar datos
+        $post->delete();
+        return response()->json([
+            'status' => true,
+            //si gustas puedes colocar un mensaje , poder este :
+            'message' => 'POST ELIMIADO!!!!',
+            
+        ],200);
+
+*estaria funcionando el crud 
+
+*faltaria gallar la manera de como usar login y sanctum
+
